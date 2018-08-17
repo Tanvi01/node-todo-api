@@ -1,4 +1,4 @@
-// require('./config/config');
+require('./config/config');
 
 const _ = require('lodash');
 const express = require('express');
@@ -15,9 +15,10 @@ const port = process.env.PORT||3000;
 
 app.use(bodyParser.json());
 
-app.post('/todos', (req, res) => {
+app.post('/todos',authenticate, (req, res) => {
   var todo = new Todo({
-    text: req.body.text
+    text: req.body.text,
+    _creator:req.user._id
   });
 
   todo.save().then((doc) => {
@@ -35,14 +36,14 @@ app.get('/todos', (req, res) => {
   });
 });
 
-app.get('/todos/:id', (req, res) => {
+app.get('/todos/:id',authenticate, (req, res) => {
   var id = req.params.id;
 
   if (!ObjectID.isValid(id)) {
     return res.status(404).send();
   }
 
-  Todo.findById(id).then((todo) => {
+  Todo.find({_creator:req.user._id}).then((todo) => {
     if (!todo) {
       return res.status(404).send();
     }
@@ -125,6 +126,14 @@ var user=new User(body);
  }).catch((e)=>{
   res.status(400).send(e);
  });
+});
+
+app.delete('/users/me/token',authenticate,(req,res)=>{
+req.user.removeToken(req.token).then(()=>{
+  res.status(200).send();
+},()=>{
+  res.status(400).send();
+});
 });
 
 app.listen(port, () => {
